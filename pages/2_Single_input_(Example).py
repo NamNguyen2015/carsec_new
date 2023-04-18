@@ -32,7 +32,7 @@ st.write("En el fichero de datos está permitido hacer comentarios utilizando el
 
 st.write("\n")
 st.write("-***Titulo de la sección.*** Es obligatorio y debe ser la primera línea.")
-title=st.text_input('Type the title: ')
+title=st.text_input('Type the title: ', 'CARSECN')
 
 DB['titulo']=title
 
@@ -67,8 +67,9 @@ DB['norm']=norm
 st.write("\n")
 st.write("-***“secc horm”*** [módulo de elasticidad] (por defecto toma 3000000 t/m2)")
 secc_horm= st.selectbox('"secc horm"', options=['horm'])
+modulo_elasticidad=st.text_input('E', 3000000)
 
-DB['secc']=secc_horm
+DB['secc_horm']=secc_horm
 
 
 
@@ -77,32 +78,30 @@ DB['secc']=secc_horm
 st.write("\n")
 st.write("-[***“coef”*** [“horm” ghorm] [“arma” garma] [“pret” gpret]].") 
 st.write("Establece los coeficientes de minoración de los materiales. No es obligatorio poner esta línea. Si se ha definido como normativa la EHE-08 los coeficientes por defecto son 1,50 para el hormigón y 1,15 para los aceros. En el caso de la AASHTO todos los coeficientes valen por defecto la unidad.")
-DB['coef']={'coef_horm': st.number_input('"horm"', 1.5),'coef_arma': st.number_input('"arma"', 1.15),'coef_pret': st.number_input('"pret"', 1.15)}
-# =============================================================================
-# DB['coef'].coef_horm = st.number_input('"horm"', 1.5)
-# DB['coef'].coef_arma = st.number_input('"arma"', 1.15)
-# DB['coef'].coef_pret = st.number_input('"pret"', 1.15)
-# =============================================================================
+
+coef_horm=st.number_input('coef_horm', 1.5)
+coef_arma=st.number_input('coef_arma', 1.15)
+coef_pret=st.number_input('coef_pret', 1.15)
 
 
-DB['coef'].coef_horm = st.number_input('"horm"', 1.5)
-DB['coef'].coef_arma = st.number_input('"arma"', 1.15)
-DB['coef'].coef_pret = st.number_input('"pret"', 1.15)
 
-DB['phi'] = st.selectbox('', options=['phi'])
-df_phi = pd.DataFrame(
-    '',
-    index=range(1),
-    columns=['col2', 'col3']
-)
+DB['coef']={'coef_horm': coef_horm,'coef_arma': coef_arma,'coef_pret': coef_pret}
 
-df_phi['col2']=0.75
-df_phi['col3']=0.90
 
 
 st.markdown('**phi**')
-response = AgGrid(df_phi, editable=True, fit_columns_on_grid_load=True)
-DB['phi']= response['data'].to_dict('records')
+
+
+
+phi_compression=st.text_input('phi_compression', 0.75)
+
+phi_traction=st.text_input('phi_traction', 0.90)
+
+
+DB['phi']={'phi_compression': phi_compression,'phi_traction': phi_traction}
+
+
+
 #*******************
 st.write("\n")
 st.write("-[***“phi”*** compr tracc]")
@@ -167,17 +166,11 @@ st.write("-***“horm”*** fck [“[ “ unidad tensión “ ]”]")
 st.write("Indica las características del hormigón para el contorno que se define. Se pueden poner varios tipo de hormigones. Dentro de esta sección se definen el contorno cerrado y los huecos poligonales y/o circulares.")
 st.write("Se puede definir las unidades en las que está dada la resistencia del hormigón (tm2, kcm2, mpa, ksi,ksf, knm2).")
 
-
-t_h = st.selectbox("Unidad de hormigon", options=["tm2", "kcm2", "mpa", "ksi","ksf", "knm2"])
 fck=st.text_input('"horm"', 3500)
-
-DB['horm'].fck = fck
-
 
 st.write("\n")
 st.write("-***“Contorno”*** puntos que definen el contorno ")
 st.markdown('**Contorno**')
-
 
 collect_numbers = lambda x : [str(int(i)) for i in re.split("[^0-9]", x)  if i != "" ]
 
@@ -189,7 +182,9 @@ _list_puntos.append(collect_numbers(numbers2))
 puntos_contorno=_list_puntos 
 st.write(puntos_contorno)
 
-DB['horm']={'fck':fck,'puntos_contorno':puntos_contorno}
+
+
+DB['horm']={'E': modulo_elasticidad,'fck':fck,'puntos_contorno':puntos_contorno} # 'puntos_contorno' is hp
 
 
 
@@ -213,33 +208,63 @@ st.write(hp)
 
 
 DB['hp']= hp
-#st.write(DB['contorno_Poligonal'])
-st.write(DB['hp'])
-st.write(hp)
-
-
-
-#***************************
 
 
 
 # *************************
-# hc
-st.write("\n")
-st.write("-***“hc”*** puntos que define el centro del centro   radio del círculo")
-DB['hc'] = st.selectbox('', options=['hc'])
-df_hc = pd.DataFrame(
-    '',
-    index=range(1),
-    columns=['Punto_Central', 'Radio']
-)
-df_hc['Punto_Central']=[5]
-df_hc['Radio']=0.30
-st.markdown('**hc**')
-response = AgGrid(df_hc, editable=True, fit_columns_on_grid_load=True)
-DB['hc']= response['data'].to_dict('records')
-#st.write(DB['hc'])
 
+
+# always check if the key exist in session state:
+
+if 'df_hc' not in st.session_state:
+	_df = { 'Punto_Central': [5],'Radio':[0.05]}
+	st.session_state.df_hc= pd.DataFrame(_df,columns=['Punto_Central', 'Radio'])
+
+st.markdown('**hc**')
+
+if st.button("Clear table", key="clear"):
+    # update dataframe state
+	st.session_state.df_hc= pd.DataFrame('',index=range(1), columns=['Punto_Central', 'Radio'])
+
+if st.button("Add rows", key='add'):
+    # update dataframe state
+	additional_rows= pd.DataFrame('',index=range(5), columns=['Punto_Central', 'Radio'])
+	st.session_state.df_hc=pd.concat([st.session_state.df_hc,additional_rows])
+	
+_df=st.session_state.df_hc.copy()
+  
+with st.form('test1') as f:
+	response = AgGrid(_df, editable=True, fit_columns_on_grid_load=True,data_return_mode=DataReturnMode.AS_INPUT,update_mode=GridUpdateMode.MODEL_CHANGED,reload_data=False,
+    wrap_text=True,resizeable=True)
+	st.form_submit_button('Confirm')
+
+
+st.session_state.df_hc=response['data'].dropna(how='any')
+
+DB['hc'] =response['data'].dropna(how='any').to_dict('records')
+
+
+
+
+
+
+# =============================================================================
+# 
+# 
+# DB['hc'] = st.selectbox('', options=['hc'])
+# df_hc = pd.DataFrame(
+#     '',
+#     index=range(1),
+#     columns=['Punto_Central', 'Radio']
+# )
+# df_hc['Punto_Central']=[5]
+# df_hc['Radio']=0.30
+# st.markdown('**hc**')
+# response = AgGrid(df_hc, editable=True, fit_columns_on_grid_load=True)
+# DB['hc']= response['data'].to_dict('records')
+# #st.write(DB['hc'])
+# 
+# =============================================================================
 # *************************
 
 
@@ -255,7 +280,7 @@ st.selectbox("unidad área ", options=["m2", "cm2", "mm2", "ft2", "in2"])
 
 fyk=st.text_input('"arma"', 51000)
 
-DB['arma'].fyk = fyk
+#DB['arma'].fyk = fyk
 
 
 # *************************
@@ -295,14 +320,14 @@ df_Caracteristicas['Area']=[0.000314]
 
 st.markdown('**Caracteristicas_ Armaduras_Multi**')
 response = AgGrid(df_Caracteristicas, editable=True, fit_columns_on_grid_load=True)
-group  = response['data'].to_dict('records')
+multi  = response['data'].to_dict('records')
 
-DB['arma']={'fyk':fyk, 'single':single, 'group':group}
+DB['arma']={'fyk':fyk, 'single':single, 'multi':multi}
 #************************
 
 
 
-fpk=st.text_input('"pret"', [1000, 2000])
+fpk=st.number_input('fpk',1670000 )
 # Caracteristicas
 st.write("\n")
 #st.write("-punto inicial    punto final      número de cables     área de cada cable")
@@ -339,9 +364,13 @@ st.markdown('**Caracteristicas_Cables_Multi**')
 response = AgGrid(df_Caracteristicas_pret, editable=True, fit_columns_on_grid_load=True)
 multi_pret  = response['data'].to_dict('records')
 
-DB['pret']={'fpk':fpk, 'single':single_pret, 'group':multi_pret}
+tension_inicial=st.number_input('tension_inicial', 1395000)
+
+DB['pret']={'fpk':fpk,'tension_inicial':tension_inicial, 'single':single_pret, 'multi':multi_pret}
 #************************
 
+
+#DB['pret']={'fpk':float,'tension_inicial':tension_inicial,'single':,'group':[{punto_inicial:int,punto_final:int,numero(de_cable):int,area:float},{...}]}
 
 
 
@@ -394,28 +423,41 @@ st.write("-Axil     beta")
 
 #%%
 file='Carsec_AutoGenerated'
-name_file = tempfile.gettempdir() + "/Carsec_AutoGenerated"
+#name_file = tempfile.gettempdir() + "/Carsec_AutoGenerated"
+
+#name_file = os.path.join(tempfile.gettempdir(),file)
+path=os.getcwd()
+path_file = os.path.join(path,file)
 
 #name_file = os.path.join(tempfile.gettempdir(),file)
 #path=os.getcwd()
 #name_file = os.path.join(path,file)
 
-#name_file = os.path.join(tempfile.gettempdir(),file)
-#path=os.getcwd()
-#name_file = os.path.join(path,file)
 
+CS.CARSEC_Writer(DB=DB, export_path=path_file)
+st.write(CS.CARSEC_Writer(DB=DB, export_path="Output_files/Carsec_AutoGenerated_10"))
 
-#CS.CARSEC_Writer(DB=DB, export_path=name_file)
-st.write(CS.CARSEC_Writer(DB=DB, export_path="Output_files/Carsec_AutoGenerated.txt"))
 
 # =============================================================================
+# st.subheader('Download data')
+# file_txt = path_file + '.txt'
+# with open(file_txt, "rb") as fp:
+# 	btn = st.download_button(label="Download Carsec Input file",data=fp,file_name="Carsec_AutoGenerated.txt",mime="application/txt")
 # 
+# 
+# 
+# =============================================================================
+
+
+
+
+#%%
+# =============================================================================
 # st.subheader('Download data')
 # name_file_txt = name_file + '.txt'
 # with open(name_file_txt, "rb") as fp:
 # 	btn = st.download_button(label="Download Carsec Input file",data=fp,file_name="Carsec_AutoGenerated.txt",mime="application/txt")
 # 	
-# 
 # 
 # =============================================================================
 
