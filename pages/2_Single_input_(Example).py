@@ -15,10 +15,9 @@ from collections import defaultdict
 from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode, DataReturnMode
 import CARSEC as CS
 import tempfile
-import re
 
-import os
-os.environ['PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION'] = 'python'
+
+
 
 st.subheader("Single Input")
 st.markdown("**We create this page with manual introductions for all input parameters. It also allows user click and download the template as an example.**")
